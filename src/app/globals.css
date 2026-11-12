@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply bg-sand-50 text-ink-800 font-sans antialiased;
+  }
+  ::selection {
+    @apply bg-forest-200 text-forest-900;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* --------------------------------- Buttons ------------------------------ */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-400
+           focus-visible:ring-offset-2 focus-visible:ring-offset-sand-50
+           disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-forest-700 text-white shadow-soft hover:bg-forest-800 active:bg-forest-900;
+  }
+  .btn-secondary {
+    @apply btn border border-sand-300 bg-white text-ink-800 shadow-soft hover:border-forest-300 hover:bg-forest-50;
+  }
+  .btn-gold {
+    @apply btn bg-gold-500 text-ink-950 shadow-soft hover:bg-gold-600;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white shadow-soft hover:bg-red-700;
+  }
+  .btn-ghost {
+    @apply btn text-ink-700 hover:bg-sand-100;
+  }
+  .btn-md {
+    @apply px-4 py-2.5 text-sm;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
+  /* ---------------------------------- Forms ------------------------------- */
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink-800;
+  }
+  .input {
+    @apply w-full rounded-xl border border-sand-300 bg-white px-3.5 py-2.5 text-sm text-ink-900
+           placeholder:text-ink-400 shadow-sm transition
+           focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-200
+           disabled:cursor-not-allowed disabled:bg-sand-100;
+  }
+  .input-error {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-200;
+  }
+  .field-error {
+    @apply mt-1.5 text-xs font-medium text-red-600;
+  }
+  .field-help {
+    @apply mt-1.5 text-xs text-ink-500;
+  }
+  textarea.input {
+    @apply py-2.5;
+  }
+  select.input {
+    @apply appearance-none bg-white pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2375654a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+  }
+
+  /* ---------------------------------- Cards ------------------------------- */
+  .card {
+    @apply rounded-2xl border border-sand-200 bg-white shadow-soft;
+  }
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift;
+  }
+
+  /* --------------------------------- Badges ------------------------------- */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  /* ------------------------------- Typography ----------------------------- */
+  .section-title {
+    @apply font-display text-2xl font-semibold text-ink-900 sm:text-3xl;
+  }
+  .section-subtitle {
+    @apply mt-2 max-w-2xl text-sm text-ink-600 sm:text-base;
+  }
+
+  .prose-block {
+    @apply whitespace-pre-line text-[15px] leading-relaxed text-ink-700;
+  }
+
+  /* ------------------------------- Utilities ------------------------------ */
+  .divider {
+    @apply border-sand-200;
+  }
+  .table-base {
+    @apply w-full text-left text-sm;
+  }
+  .table-base thead th {
+    @apply border-b border-sand-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-500;
+  }
+  .table-base tbody td {
+    @apply border-b border-sand-100 px-4 py-3 align-middle text-ink-800;
+  }
+  .table-base tbody tr:hover {
+    @apply bg-sand-50;
+  }
+}

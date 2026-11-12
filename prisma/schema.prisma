@@ -1,0 +1,304 @@
+// Sokoni Nyumbani - database schema
+// Sellers' identity lives in Supabase Auth (auth.users). The Profile.id
+// is the Supabase Auth user id (uuid). All business data lives here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Session-mode pooler (port 5432). Prisma CLI uses this for schema
+  // changes (db push / migrations) because DDL hangs on the transaction
+  // pooler. The app itself connects through DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ListingStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  RESERVED
+  SOLD
+  EXPIRED
+  REJECTED
+  REMOVED
+}
+
+enum ItemCondition {
+  BRAND_NEW
+  LIKE_NEW
+  EXCELLENT
+  GOOD
+  FAIR
+  FOR_PARTS
+}
+
+enum PreferredContact {
+  ANY
+  WHATSAPP
+  PHONE
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFYING
+  CONFIRMED
+  FAILED
+}
+
+enum PaymentMethod {
+  MPESA
+  SIMULATION
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportReason {
+  SUSPICIOUS
+  SCAM
+  FAKE_ITEM
+  DUPLICATE_SPAM
+  PROHIBITED
+  WRONG_CATEGORY
+  PRICE_ISSUE
+  OTHER
+}
+
+model Profile {
+  id               String    @id // Supabase Auth user id (uuid)
+  name             String
+  email            String    @unique
+  phone            String?   @unique
+  whatsappPhone    String? // E.164 without '+', used for buyer contact
+  role             Role      @default(USER)
+  county           String?
+  town             String?
+  suspended        Boolean   @default(false)
+  suspensionReason String?
+  phoneVerifiedAt  DateTime?
+  phoneOtp         String?
+  phoneOtpExpiresAt DateTime?
+  loginCount       Int       @default(0)
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  listings        Listing[]
+  subscriptions   Subscription[]
+  payments        Payment[]
+  reportsFiled    Report[]   @relation("Reporter")
+  reportsAgainst  Report[]   @relation("ReportedUser")
+
+  @@index([role])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String   @default("package")
+  orderIndex  Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  subcategories Subcategory[]
+  listings      Listing[]
+
+  @@index([orderIndex])
+}
+
+model Subcategory {
+  id         String  @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+
+  listings Listing[]
+
+  @@unique([categoryId, slug])
+}
+
+model Listing {
+  id           String         @id @default(cuid())
+  sellerId     String
+  seller       Profile        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     Category       @relation(fields: [categoryId], references: [id])
+  subcategoryId String?
+  subcategory  Subcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+  title        String
+  description String
+  price        Int // Kenyan Shillings
+  negotiable   Boolean        @default(false)
+  condition    ItemCondition
+
+  reasonForSelling String
+
+  brand           String?
+  model           String?
+  ageDescription  String?
+  originalPrice   Int?
+  dimensions       String?
+
+  county String
+  town   String
+
+  deliveryAvailable Boolean          @default(false)
+  deliveryNote      String?
+  buyerCollects     Boolean          @default(true)
+  preferredContact  PreferredContact @default(ANY)
+
+  status         ListingStatus @default(PENDING_APPROVAL)
+  moderationNote String?
+  featured       Boolean       @default(false)
+  viewsCount     Int           @default(0)
+  expiresAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  images ListingImage[]
+  reports Report[]
+
+  @@index([status, createdAt])
+  @@index([categoryId])
+  @@index([county])
+  @@index([sellerId])
+  @@index([price])
+}
+
+model ListingImage {
+  id          String   @id @default(cuid())
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  storagePath String // Supabase storage path, or a /api/placeholder URL for demo data
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([listingId])
+}
+
+model SubscriptionPlan {
+  id               String  @id @default(cuid())
+  name             String
+  slug             String  @unique
+  description      String
+  priceKes         Int
+  durationDays     Int
+  maxActiveListings Int
+  features         String  @default("") // one feature per line
+  badge            String?
+  promoText        String?
+  active           Boolean @default(true)
+  orderIndex       Int     @default(0)
+  createdAt        DateTime @default(now())
+
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@index([orderIndex])
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String
+  user             Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId           String
+  plan             SubscriptionPlan   @relation(fields: [planId], references: [id])
+  startsAt         DateTime           @default(now())
+  endsAt           DateTime
+  maxActiveListings Int
+  status           SubscriptionStatus @default(ACTIVE)
+  createdAt        DateTime           @default(now())
+
+  payments Payment[]
+
+  @@index([userId, status])
+  @@index([status, endsAt])
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  userId          String
+  user            Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId          String
+  plan            SubscriptionPlan @relation(fields: [planId], references: [id])
+  subscriptionId  String?
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  amount          Int
+  phone           String?
+  method          PaymentMethod
+  status          PaymentStatus  @default(PENDING)
+  merchantRequestId String?
+  checkoutRequestId String?      @unique
+  mpesaReceipt    String?
+  failureReason   String?
+  verifiedAt      DateTime?
+  simulated       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+model Report {
+  id            String       @id @default(cuid())
+  reporterId    String?
+  reporter      Profile?     @relation("Reporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  reporterName  String?
+  reporterEmail String?
+
+  listingId      String?
+  listing        Listing?     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reportedUserId String?
+  reportedUser   Profile?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+
+  reason        ReportReason
+  details        String
+  status        ReportStatus @default(OPEN)
+  resolutionNote String?
+  resolvedAt    DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([status, createdAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
